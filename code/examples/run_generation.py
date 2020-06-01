@@ -34,14 +34,15 @@ from pytorch_transformers import XLNetLMHeadModel, XLNetTokenizer
 from pytorch_transformers import TransfoXLLMHeadModel, TransfoXLTokenizer
 
 
-logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
-                    datefmt = '%m/%d/%Y %H:%M:%S',
-                    level = logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
+                    datefmt='%m/%d/%Y %H:%M:%S',
+                    level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 MAX_LENGTH = int(10000)  # Hardcoded max length to avoid infinite loop
 
-ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys()) for conf in (GPT2Config, OpenAIGPTConfig, XLNetConfig, TransfoXLConfig)), ())
+ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys()) for conf in (
+    GPT2Config, OpenAIGPTConfig, XLNetConfig, TransfoXLConfig)), ())
 
 MODEL_CLASSES = {
     'gpt2': (GPT2LMHeadModel, GPT2Tokenizer),
@@ -85,17 +86,20 @@ def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')
     top_k = min(top_k, logits.size(-1))  # Safety check
     if top_k > 0:
         # Remove all tokens with a probability less than the last token of the top-k
-        indices_to_remove = logits < torch.topk(logits, top_k)[0][..., -1, None]
+        indices_to_remove = logits < torch.topk(logits, top_k)[
+            0][..., -1, None]
         logits[indices_to_remove] = filter_value
 
     if top_p > 0.0:
         sorted_logits, sorted_indices = torch.sort(logits, descending=True)
-        cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+        cumulative_probs = torch.cumsum(
+            F.softmax(sorted_logits, dim=-1), dim=-1)
 
         # Remove tokens with cumulative probability above the threshold
         sorted_indices_to_remove = cumulative_probs > top_p
         # Shift the indices to the right to keep also the first token above the threshold
-        sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+        sorted_indices_to_remove[...,
+                                 1:] = sorted_indices_to_remove[..., :-1].clone()
         sorted_indices_to_remove[..., 0] = 0
 
         indices_to_remove = sorted_indices[sorted_indices_to_remove]
@@ -111,20 +115,28 @@ def sample_sequence(model, length, context, num_samples=1, temperature=1, top_k=
         for _ in trange(length):
 
             inputs = {'input_ids': generated}
-            if is_xlnet: 
+            if is_xlnet:
                 # XLNet is a direct (predict same token, not next token) and bi-directional model by default
                 # => need one additional dummy token in the input (will be masked), attention mask and target mapping (see model docstring)
-                input_ids = torch.cat((generated, torch.zeros((1, 1), dtype=torch.long, device=device)), dim=1)
-                perm_mask = torch.zeros((1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float, device=device)
-                perm_mask[:, :, -1] = 1.0  # Previous tokens don't see last token
-                target_mapping = torch.zeros((1, 1, input_ids.shape[1]), dtype=torch.float, device=device)
+                input_ids = torch.cat((generated, torch.zeros(
+                    (1, 1), dtype=torch.long, device=device)), dim=1)
+                perm_mask = torch.zeros(
+                    (1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float, device=device)
+                # Previous tokens don't see last token
+                perm_mask[:, :, -1] = 1.0
+                target_mapping = torch.zeros(
+                    (1, 1, input_ids.shape[1]), dtype=torch.float, device=device)
                 target_mapping[0, 0, -1] = 1.0  # predict last token
-                inputs = {'input_ids': input_ids, 'perm_mask': perm_mask, 'target_mapping': target_mapping}
+                inputs = {'input_ids': input_ids, 'perm_mask': perm_mask,
+                          'target_mapping': target_mapping}
 
-            outputs = model(**inputs)  # Note: we could also use 'past' with GPT-2/Transfo-XL/XLNet (cached hidden-states)
+            # Note: we could also use 'past' with GPT-2/Transfo-XL/XLNet (cached hidden-states)
+            outputs = model(**inputs)
             next_token_logits = outputs[0][0, -1, :] / temperature
-            filtered_logits = top_k_top_p_filtering(next_token_logits, top_k=top_k, top_p=top_p)
-            next_token = torch.multinomial(F.softmax(filtered_logits, dim=-1), num_samples=1)
+            filtered_logits = top_k_top_p_filtering(
+                next_token_logits, top_k=top_k, top_p=top_p)
+            next_token = torch.multinomial(
+                F.softmax(filtered_logits, dim=-1), num_samples=1)
             generated = torch.cat((generated, next_token.unsqueeze(0)), dim=1)
     return generated
 
@@ -147,7 +159,8 @@ def main():
                         help="random seed for initialization")
     args = parser.parse_args()
 
-    args.device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+    args.device = torch.device(
+        "cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
     args.n_gpu = torch.cuda.device_count()
 
     set_seed(args)
@@ -162,7 +175,8 @@ def main():
     if args.length < 0 and model.config.max_position_embeddings > 0:
         args.length = model.config.max_position_embeddings
     elif 0 < model.config.max_position_embeddings < args.length:
-        args.length = model.config.max_position_embeddings  # No generation bigger than model size 
+        # No generation bigger than model size
+        args.length = model.config.max_position_embeddings
     elif args.length < 0:
         args.length = MAX_LENGTH  # avoid infinite loop
 
@@ -171,7 +185,8 @@ def main():
         raw_text = args.prompt if args.prompt else input("Model prompt >>> ")
         if args.model_type in ["transfo-xl", "xlnet"]:
             # Models with memory likes to have a long prompt for short inputs.
-            raw_text = (args.padding_text if args.padding_text else PADDING_TEXT) + raw_text
+            raw_text = (
+                args.padding_text if args.padding_text else PADDING_TEXT) + raw_text
         context_tokens = tokenizer.encode(raw_text)
         out = sample_sequence(
             model=model,

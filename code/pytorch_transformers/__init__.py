@@ -1,4 +1,4 @@
-__version__ = "1.2.0"
+l__version__ = "1.2.0"
 # Work around to update TensorFlow's absl.logging threshold which alters the
 # default Python logging output behavior when present.
 # see: https://github.com/abseil/abseil-py/issues/99

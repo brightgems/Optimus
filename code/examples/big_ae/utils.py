@@ -595,9 +595,6 @@ class Dialog_TokenDataset(Dataset):
 
 
 
-
-
-
 class TextDataset_Split(Dataset):
     def __init__(self, tokenizer, args, file_path='train', text_split_mode='natural', block_size=512):
         assert os.path.isfile(file_path)
@@ -656,11 +653,9 @@ class TextDataset_Split(Dataset):
         data = []
         labels = [] if label else None
         dropped = 0
-        
 
-
-        with open(fname) as fin:
-            for line in fin:
+        with open(fname,encoding="utf-8") as fin:
+            for line in fin.read_lines():
 
                 if label:
                     split_line = line.split('\t')
@@ -896,7 +891,7 @@ class TextDataset_2Tokenizers(Dataset):
         dropped = 0
         count = 0
 
-        with open(fname) as fin:
+        with open(fname,encoding="utf-8") as fin:
             for line in fin:
                 # pdb.set_trace()
 

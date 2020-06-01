@@ -272,7 +272,7 @@ def main():
 
     ## Encoder options
     parser.add_argument("--encoder_model_type", default="bert", type=str,
-                        help="The encoder model architecture to be fine-tuned.")
+                        help="The encoder model architecture to be fine-tuned.")``
     parser.add_argument("--encoder_model_name_or_path", default="bert-base-cased", type=str,
                         help="The encoder model checkpoint for weights initialization.")
     parser.add_argument("--encoder_config_name", default="", type=str,

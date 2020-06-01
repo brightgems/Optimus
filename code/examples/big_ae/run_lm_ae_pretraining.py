@@ -41,13 +41,15 @@ from pytorch_transformers import (WEIGHTS_NAME, AdamW, WarmupLinearSchedule,
                                   BertConfig, BertModel, BertTokenizer,
                                   GPT2Config, GPT2LMHeadModel, GPT2Tokenizer,
                                   OpenAIGPTConfig, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer,
-                                  RobertaConfig, RobertaForMaskedLM, RobertaTokenizer)
-
+                                  RobertaConfig, RobertaForMaskedLM, RobertaTokenizer,
+                                  XLNetConfig, XLNetLMHeadModel, XLNetTokenizer)
+from utils import (BucketingDataLoader, TextDataset_Split, TextDataset_2Tokenizers)
 
 logger = logging.getLogger(__name__)
 
 
 MODEL_CLASSES = {
+    'xlnet': (XLNetConfig, XLNetLMHeadModel, XLNetTokenizer),
     'gpt2': (GPT2Config, GPT2LMHeadModel, GPT2Tokenizer),
     'openai-gpt': (OpenAIGPTConfig, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer),
     'bert': (BertConfig, BertModel, BertTokenizer),
@@ -55,111 +57,11 @@ MODEL_CLASSES = {
 }
 
 
-class TextDataset(Dataset):
-    def __init__(self, tokenizer, file_path='train', block_size=512):
-        assert os.path.isfile(file_path)
-        directory, filename = os.path.split(file_path)
-        cached_features_file = os.path.join(directory, f'cached_lm_{block_size}_{filename}')
-
-        if os.path.exists(cached_features_file):
-            logger.info("Loading features from cached file %s", cached_features_file)
-            with open(cached_features_file, 'rb') as handle:
-                self.examples = pickle.load(handle)
-        else:
-            logger.info("Creating features from dataset file at %s", directory)
-
-            self.examples = []
-            with open(file_path, encoding="utf-8") as f:
-                text = f.read()
-
-
-            tokenized_text = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(text))
-
-            while len(tokenized_text) >= block_size:  # Truncate in block of block_size
-                self.examples.append(tokenizer.add_special_tokens_single_sentence(tokenized_text[:block_size]))
-                tokenized_text = tokenized_text[block_size:]
-            # Note that we are loosing the last truncated example here for the sake of simplicity (no padding)
-            # If your dataset is small, first you should loook for a bigger one :-) and second you
-            # can change this behavior by adding (model specific) padding.
-
-            logger.info("Saving features into cached file %s", cached_features_file)
-            with open(cached_features_file, 'wb') as handle:
-                pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    def __len__(self):
-        return len(self.examples)
-
-    def __getitem__(self, item):
-        return torch.tensor(self.examples[item])
-
-
-
-class TextDataset_2Tokenizers(Dataset):
-    def __init__(self, tokenizers, file_path='train', block_size=512):
-        assert os.path.isfile(file_path)
-        directory, filename = os.path.split(file_path)
-        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename}')
-
-
-        
-        if os.path.exists(cached_features_file):
-            logger.info("Loading features from cached file %s", cached_features_file)
-            with open(cached_features_file, 'rb') as handle:
-                self.examples = pickle.load(handle)
-        else:
-            logger.info("Creating features from dataset file at %s", directory)
-
-            
-            with open(file_path, encoding="utf-8") as f:
-                text = f.read()
-
-            # pdb.set_trace()
-            self.examples = []
-            # Chunyuan: divide the linguistic text into the same length, then different tokenization schemes are applied
-            while len(text) >= block_size:  # Truncate in block of block_size
-
-                tokenized_text0 = tokenizers[0].convert_tokens_to_ids(tokenizers[0].tokenize(text[:block_size]))
-                tokenized_text0 = tokenizers[0].add_special_tokens_single_sentence(tokenized_text0)
-                tokenized_text0_length = len(tokenized_text0) 
-                pad_token=tokenizers[0].convert_tokens_to_ids([tokenizers[0].pad_token])[0]
-                tokenized_text0 = tokenized_text0 + ([pad_token] * (block_size - tokenized_text0_length)  ) # Pad up to the sequence length.
-                assert len(tokenized_text0) == block_size
-                
-                tokenized_text1 = tokenizers[1].convert_tokens_to_ids(tokenizers[1].tokenize(text[:block_size]))
-                tokenized_text1 = tokenizers[1].add_special_tokens_single_sentence(tokenized_text1)
-                tokenized_text1_length = len(tokenized_text1)
-                pad_token=tokenizers[1].convert_tokens_to_ids([tokenizers[1].pad_token])[0]
-                tokenized_text1 = tokenized_text1 + ([pad_token] *  (block_size - tokenized_text1_length) ) # Pad up to the sequence length.
-                assert len(tokenized_text1) == block_size
-
-                self.examples.append([tokenized_text0, tokenized_text0_length, tokenized_text1, tokenized_text1_length])
-
-                text = text[block_size:]
-            # Note that we are loosing the last truncated example here for the sake of simplicity (no padding)
-            # If your dataset is small, first you should loook for a bigger one :-) and second you
-            # can change this behavior by adding (model specific) padding.
-
-            logger.info("Saving features into cached file %s", cached_features_file)
-            with open(cached_features_file, 'wb') as handle:
-                pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    def __len__(self):
-        return len(self.examples)
-
-    def __getitem__(self, item):
-        # pdb.set_trace()
-        # Convert to Tensors and build dataset
-        tokenized_text0= torch.tensor(self.examples[item][0], dtype=torch.long)
-        tokenized_text1= torch.tensor(self.examples[item][2], dtype=torch.long)
-        tokenized_text_lengths = torch.tensor([self.examples[item][1], self.examples[item][3]], dtype=torch.long)
-        # pdb.set_trace()
-        return (tokenized_text0, tokenized_text1, tokenized_text_lengths)
-
 def load_and_cache_examples(args, tokenizer, evaluate=False):
     if isinstance(tokenizer, list):
-        dataset = TextDataset_2Tokenizers(tokenizer, file_path=args.eval_data_file if evaluate else args.train_data_file, block_size=args.block_size)
+        dataset = TextDataset_2Tokenizers(tokenizer, args, file_path=args.eval_data_file if evaluate else args.train_data_file, block_size=args.block_size)
     else:
-        dataset = TextDataset(tokenizer, file_path=args.eval_data_file if evaluate else args.train_data_file, block_size=args.block_size)
+        dataset = TextDataset_Split(tokenizer, args, file_path=args.eval_data_file if evaluate else args.train_data_file, block_size=args.block_size)
     return dataset
 
 
@@ -193,7 +95,7 @@ def mask_tokens(inputs, tokenizer, args):
     return inputs, labels
 
 
-def train(args, train_dataset, model_encoder, model_decoder, encoder_tokenizer, decoder_tokenizer):
+def train(args, train_dataset, model_encoder, model_decoder, encoder_tokenizer, decoder_tokenizer,is_xlnet=True):
     """ Train the model """
     if args.local_rank in [-1, 0]:
         tb_writer = SummaryWriter()
@@ -287,9 +189,17 @@ def train(args, train_dataset, model_encoder, model_decoder, encoder_tokenizer, 
             outputs = model_encoder(inputs)
             pooled_hidden_fea = outputs[1]  # model outputs are always tuple in pytorch-transformers (see doc)
 
- 
+            if is_xlnet: 
+                # XLNet is a direct (predict same token, not next token) and bi-directional model by default
+                # => need one additional dummy token in the input (will be masked), attention mask and target mapping (see model docstring)
+                input_ids = torch.cat((tokenized_text1, torch.zeros((1, 1), dtype=torch.long, device=device)), dim=1)
+                perm_mask = torch.zeros((1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float, device=device)
+                perm_mask[:, :, -1] = 1.0  # Previous tokens don't see last token
+                target_mapping = torch.zeros((1, 1, input_ids.shape[1]), dtype=torch.float, device=device)
+                target_mapping[0, 0, -1] = 1.0  # predict last token
+                inputs = {'input_ids': input_ids, 'perm_mask': perm_mask, 'target_mapping': target_mapping}
             # Decoding
-            outputs = model_decoder(input_ids=tokenized_text1, past=pooled_hidden_fea, labels=labels)
+            outputs = model_decoder(input_ids=input_ids, mems=pooled_hidden_fea, labels=labels)
             loss = outputs[0]  # model outputs are always tuple in pytorch-transformers (see doc)
 
 
@@ -436,11 +346,12 @@ def main():
                         help="The input training data file (a text file).")
     parser.add_argument("--output_dir", default=None, type=str, required=True,
                         help="The output directory where the model predictions and checkpoints will be written.")
-
+    parser.add_argument("--dataset", default=None, type=str, help="The dataset.")
     ## Other parameters
     parser.add_argument("--eval_data_file", default=None, type=str,
                         help="An optional input evaluation data file to evaluate the perplexity on (a text file).")
-
+    parser.add_argument("--use_philly", action='store_true',
+                        help="Use Philly for computing.")    
     ## Encoder options
     parser.add_argument("--encoder_model_type", default="bert", type=str,
                         help="The encoder model architecture to be fine-tuned.")
