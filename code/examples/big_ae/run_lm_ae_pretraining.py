@@ -192,14 +192,16 @@ def train(args, train_dataset, model_encoder, model_decoder, encoder_tokenizer, 
             if is_xlnet: 
                 # XLNet is a direct (predict same token, not next token) and bi-directional model by default
                 # => need one additional dummy token in the input (will be masked), attention mask and target mapping (see model docstring)
-                input_ids = torch.cat((tokenized_text1, torch.zeros((1, 1), dtype=torch.long, device=device)), dim=1)
-                perm_mask = torch.zeros((1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float, device=device)
+                input_ids = torch.cat((inputs, torch.zeros((1, 1), dtype=torch.long, device=args.device)), dim=1)
+                perm_mask = torch.zeros((1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float, device=args.device)
                 perm_mask[:, :, -1] = 1.0  # Previous tokens don't see last token
-                target_mapping = torch.zeros((1, 1, input_ids.shape[1]), dtype=torch.float, device=device)
+                target_mapping = torch.zeros((1, 1, input_ids.shape[1]), dtype=torch.float, device=args.device)
                 target_mapping[0, 0, -1] = 1.0  # predict last token
                 inputs = {'input_ids': input_ids, 'perm_mask': perm_mask, 'target_mapping': target_mapping}
-            # Decoding
-            outputs = model_decoder(input_ids=input_ids, mems=pooled_hidden_fea, labels=labels)
+                # Decoding
+                outputs = model_decoder(input_ids=input_ids, mems=pooled_hidden_fea, labels=labels)
+            else:
+                outputs = model_decoder(input_ids=input_ids, past=pooled_hidden_fea, labels=labels)
             loss = outputs[0]  # model outputs are always tuple in pytorch-transformers (see doc)
 
 
@@ -315,7 +317,7 @@ def evaluate(args, model_encoder, model_decoder, encoder_tokenizer, decoder_toke
             pooled_hidden_fea = outputs[1]  # model outputs are always tuple in pytorch-transformers (see doc)
 
             # Decoding
-            outputs = model_decoder(input_ids=tokenized_text1, past=pooled_hidden_fea, labels=labels)
+            outputs = model_decoder(input_ids=tokenized_text1, mems=pooled_hidden_fea, labels=labels)
             lm_loss = outputs[0]
 
             eval_loss += lm_loss.mean().item()
@@ -363,7 +365,7 @@ def main():
                         help="Optional pretrained tokenizer name or path if not the same as model_name_or_path")
 
     ## Decoder options
-    parser.add_argument("--decoder_model_type", default="gpt2", type=str,
+    parser.add_argument("--decoder_model_type", default="xlnet", type=str,
                         help="The decoder model architecture to be fine-tuned.")
     parser.add_argument("--decoder_model_name_or_path", default="bert-base-cased", type=str,
                         help="The decoder model checkpoint for weights initialization.")
@@ -533,8 +535,8 @@ def main():
 
         if args.local_rank == 0:
             torch.distributed.barrier()
-
-        global_step, tr_loss = train(args, train_dataset, model_encoder, model_decoder, tokenizer_encoder, tokenizer_decoder)
+        is_xlnet=args.decoder_model_type=='xlnet'
+        global_step, tr_loss = train(args, train_dataset, model_encoder, model_decoder, tokenizer_encoder, tokenizer_decoder,is_xlnet=is_xlnet)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
 
