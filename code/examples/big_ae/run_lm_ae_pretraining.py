@@ -159,6 +159,7 @@ def train(args, train_dataset, model_encoder, model_decoder, encoder_tokenizer, 
                    args.train_batch_size * args.gradient_accumulation_steps * (torch.distributed.get_world_size() if args.local_rank != -1 else 1))
     logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
     logger.info("  Total optimization steps = %d", t_total)
+    logger.info("  device = %s", args.device)
 
     global_step = 0
     tr_loss, logging_loss = 0.0, 0.0
@@ -188,11 +189,11 @@ def train(args, train_dataset, model_encoder, model_decoder, encoder_tokenizer, 
             # Encoding
             outputs = model_encoder(inputs)
             pooled_hidden_fea = outputs[1]  # model outputs are always tuple in pytorch-transformers (see doc)
-
             if is_xlnet: 
                 # XLNet is a direct (predict same token, not next token) and bi-directional model by default
                 # => need one additional dummy token in the input (will be masked), attention mask and target mapping (see model docstring)
-                input_ids = torch.cat((inputs, torch.zeros((1, 1), dtype=torch.long, device=args.device)), dim=1)
+                logger.info(tokenized_text1)
+                input_ids = torch.cat((tokenized_text1, torch.zeros((1, 1), dtype=torch.long)), dim=1).to(args.device)
                 perm_mask = torch.zeros((1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float, device=args.device)
                 perm_mask[:, :, -1] = 1.0  # Previous tokens don't see last token
                 target_mapping = torch.zeros((1, 1, input_ids.shape[1]), dtype=torch.float, device=args.device)
@@ -201,7 +202,7 @@ def train(args, train_dataset, model_encoder, model_decoder, encoder_tokenizer, 
                 # Decoding
                 outputs = model_decoder(input_ids=input_ids, mems=pooled_hidden_fea, labels=labels)
             else:
-                outputs = model_decoder(input_ids=input_ids, past=pooled_hidden_fea, labels=labels)
+                outputs = model_decoder(input_ids=tokenized_text1, past=pooled_hidden_fea, labels=labels)
             loss = outputs[0]  # model outputs are always tuple in pytorch-transformers (see doc)
 
 
