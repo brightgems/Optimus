@@ -28,16 +28,24 @@ import numpy as np
 
 from pytorch_transformers import GPT2Config, OpenAIGPTConfig, XLNetConfig, TransfoXLConfig
 
-from pytorch_transformers import GPT2LMHeadModel, GPT2Tokenizer
+from pytorch_transformers import GPT2LMHeadModel, GPT2Tokenizer, BertTokenizer
 from pytorch_transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer
 from pytorch_transformers import XLNetLMHeadModel, XLNetTokenizer
 from pytorch_transformers import TransfoXLLMHeadModel, TransfoXLTokenizer
+import io
+import sys
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer,encoding='utf8') #改变标准输出的默认编码
+# console log
 
-
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
-                    datefmt='%m/%d/%Y %H:%M:%S',
-                    level=logging.INFO)
 logger = logging.getLogger(__name__)
+# logging.basicConfig(format='%(asctime)s- %(message)s',
+#                     datefmt='%m/%d/%Y %H:%M:%S',
+#                     level=logging.INFO,stream=sys.stdout)
+formatter = logging.Formatter('%(asctime)s - %(message)s',datefmt='%m/%d/%Y %H:%M:%S')
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.INFO)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 MAX_LENGTH = int(10000)  # Hardcoded max length to avoid infinite loop
 
@@ -45,7 +53,7 @@ ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys()) for conf in (
     GPT2Config, OpenAIGPTConfig, XLNetConfig, TransfoXLConfig)), ())
 
 MODEL_CLASSES = {
-    'gpt2': (GPT2LMHeadModel, GPT2Tokenizer),
+    'gpt2': (GPT2LMHeadModel, BertTokenizer),
     'openai-gpt': (OpenAIGPTLMHeadModel, OpenAIGPTTokenizer),
     'xlnet': (XLNetLMHeadModel, XLNetTokenizer),
     'transfo-xl': (TransfoXLLMHeadModel, TransfoXLTokenizer),
@@ -149,7 +157,7 @@ def main():
                         help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(ALL_MODELS))
     parser.add_argument("--prompt", type=str, default="")
     parser.add_argument("--padding_text", type=str, default="")
-    parser.add_argument("--length", type=int, default=20)
+    parser.add_argument("--length", type=int, default=100)
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--top_k", type=int, default=0)
     parser.add_argument("--top_p", type=float, default=0.9)
@@ -187,7 +195,14 @@ def main():
             # Models with memory likes to have a long prompt for short inputs.
             raw_text = (
                 args.padding_text if args.padding_text else PADDING_TEXT) + raw_text
-        context_tokens = tokenizer.encode(raw_text)
+        logger.info('raw_text: %s', raw_text)
+        # chinese model use bert tokenizer
+        if args.model_type == 'gpt2':
+            context_tokens = tokenizer.tokenize(raw_text)    
+            context_tokens = tokenizer.convert_tokens_to_ids(context_tokens)
+        else:
+            context_tokens = tokenizer.encode(raw_text)
+
         out = sample_sequence(
             model=model,
             context=context_tokens,
@@ -199,7 +214,13 @@ def main():
             is_xlnet=bool(args.model_type == "xlnet"),
         )
         out = out[0, len(context_tokens):].tolist()
-        text = tokenizer.decode(out, clean_up_tokenization_spaces=True)
+        
+
+        if args.model_type == 'gpt2':
+            tokens = tokenizer.convert_ids_to_tokens(out)
+            text = ' '.join([it for it in tokens if it != '[PAD]'])
+        else:
+            text = tokenizer.decode(out, clean_up_tokenization_spaces=True)
         print(text)
         if args.prompt:
             break

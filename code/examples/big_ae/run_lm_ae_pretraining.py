@@ -194,10 +194,7 @@ def train(args, train_dataset, model_encoder, model_decoder, encoder_tokenizer, 
                 # => need one additional dummy token in the input (will be masked), attention mask and target mapping (see model docstring)
                 logger.info(tokenized_text1)
                 input_ids = torch.cat((tokenized_text1, torch.zeros((1, 1), dtype=torch.long)), dim=1).to(args.device)
-                perm_mask = torch.zeros((1, input_ids.shape[1], input_ids.shape[1]), dtype=torch.float, device=args.device)
-                perm_mask[:, :, -1] = 1.0  # Previous tokens don't see last token
-                target_mapping = torch.zeros((1, 1, input_ids.shape[1]), dtype=torch.float, device=args.device)
-                target_mapping[0, 0, -1] = 1.0  # predict last token
+                # TODO: input_mask, seg_ids
                 inputs = {'input_ids': input_ids, 'perm_mask': perm_mask, 'target_mapping': target_mapping}
                 # Decoding
                 outputs = model_decoder(input_ids=input_ids, mems=pooled_hidden_fea, labels=labels)

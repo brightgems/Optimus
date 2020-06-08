@@ -101,7 +101,8 @@ class VAE(nn.Module):
         # logger.info(inputs)
         # logger.info(attention_mask)
         # logger.info(labels)
-        reconstrution_mask=(labels != 50257).float() # 50257 is the padding token for GPT2
+        # reconstrution_mask=(labels != 50257).float() # 50257 is the padding token for GPT2
+        reconstrution_mask=(labels != self.pad_token_id).float() # enable with bert tokenizer
         sent_length = torch.sum(reconstrution_mask, dim=1)
 
         

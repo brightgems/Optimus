@@ -150,8 +150,8 @@ def save_checkpoint(model_vae, optimizer, global_step, args):
     # Save a trained model, configuration and tokenizer using `save_pretrained()`.
     # They can then be reloaded using `from_pretrained()`
 
-    model_encoder_to_save = model_vae.module.encoder if hasattr(model_vae, 'module') else model_vae.encoder  # Take care of distributed/parallel training
-    model_decoder_to_save = model_vae.module.decoder if hasattr(model_vae, 'module') else model_vae.decoder  # Take care of distributed/parallel training
+    model_encoder_to_save = model_vae.encoder if hasattr(model_vae, 'module') else model_vae.encoder  # Take care of distributed/parallel training
+    model_decoder_to_save = model_vae.decoder if hasattr(model_vae, 'module') else model_vae.decoder  # Take care of distributed/parallel training
 
     # Good practice: save your training arguments together with the trained model
     if args.use_philly:
@@ -350,25 +350,25 @@ def train(args, train_dataloader, model_vae, encoder_tokenizer, decoder_tokenize
             model_vae.train()
 
             beta_t = beta_t_list[step +  epoch*len(epoch_iterator)]
-            model_vae.module.args.beta = beta_t
+            model_vae.args.beta = beta_t
 
             if beta_t == 0.0:
-                model_vae.module.args.fb_mode = 0
+                model_vae.args.fb_mode = 0
             else:
-                model_vae.module.args.fb_mode = 1
+                model_vae.args.fb_mode = 1
             
             if args.use_deterministic_connect:
-                model_vae.module.args.fb_mode = 2
+                model_vae.args.fb_mode = 2
 
 
             loss_rec, loss_kl, loss = model_vae(inputs, labels)
 
 
             # Chunyuan: loss_rec size is [4], while latent_z size is [12]
-            if args.n_gpu > 1:
-                loss_rec = loss_rec.mean()  # mean() to average on multi-gpu parallel training
-                loss_kl = loss_kl.mean()
-                loss = loss.mean()
+            # if args.n_gpu > 1:
+            loss_rec = loss_rec.mean()  # mean() to average on multi-gpu parallel training
+            loss_kl = loss_kl.mean()
+            loss = loss.mean()
 
             if args.use_philly:
                 print("PROGRESS: {}%".format(round(100 * (step +  epoch*len(epoch_iterator) ) /(int(args.num_train_epochs) *  len(epoch_iterator)) , 4))) 
@@ -378,7 +378,7 @@ def train(args, train_dataloader, model_vae, encoder_tokenizer, decoder_tokenize
                 (
                     f'iter: {step +  epoch*len(epoch_iterator) }; loss: {loss.item():.3f}; '
                     f'loss_rec: {loss_rec.item():.3f}; loss_kl: {loss_kl.item():.3f}; '
-                    f'beta: {model_vae.module.args.beta:.3f}'
+                    f'beta: {model_vae.args.beta:.3f}'
                 )
             )
 
