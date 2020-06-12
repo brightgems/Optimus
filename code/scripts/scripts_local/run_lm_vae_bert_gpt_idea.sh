@@ -1,6 +1,6 @@
 export PYTHONPATH="${PYTHONPATH}:/workspace/code"
 
-export GPT2Model_PATH=/d/models/gpt2-essays
+export GPT2Model_PATH=/d/models/gpt2-troch-cn-base-essays
 export BERTModel_PATH=/d/models/bert/chinese_wwm_ext_pytorch
 
 export TRAIN_FILE=../data/datasets/debug_data/train.txt
@@ -11,9 +11,9 @@ CUDA_VISIBLE_DEVICES=$GPU_ID python examples/big_ae/run_lm_vae_training.py \
     --dataset Debug \
     --output_dir=../output/local_lm_vae_debug_bert_gpt \
     --encoder_model_type=bert \
-    --encoder_model_name_or_path=bert-base-cased \
+    --encoder_model_name_or_path=$BERTModel_PATH \
     --decoder_model_type=gpt2 \
-    --decoder_model_name_or_path=gpt2 \
+    --decoder_model_name_or_path=$GPT2Model_PATH \
     --train_data_file=$TRAIN_FILE \
     --do_train \
     --do_eval \
