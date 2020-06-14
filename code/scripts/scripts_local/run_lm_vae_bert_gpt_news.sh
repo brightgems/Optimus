@@ -28,4 +28,5 @@ CUDA_VISIBLE_DEVICES=$GPU_ID python examples/big_ae/run_lm_vae_training.py \
     --logging_steps 100 \
     --overwrite_output_dir \
     --per_gpu_train_batch_size 8 \
+    --fp16 \
     --block_size 128
