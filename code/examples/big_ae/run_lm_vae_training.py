@@ -21,7 +21,7 @@ using a masked language modeling (MLM) loss.
 
 from __future__ import absolute_import, division, print_function
 
-
+import shutil
 import pdb
 import argparse
 import glob
@@ -214,6 +214,15 @@ def save_checkpoint(model_vae, optimizer, global_step, args):
         torch.save(checkpoint, os.path.join(output_full_dir, 'training.bin'))
         logger.info("Saving full checkpoint to %s", output_full_dir)
 
+    # keep 3 checkpoints for saving disk space
+    ckfiles=glob.glob(args.output_dir)
+    for ckdir in ckfiles:
+        if not os.path.basename(ckdir).startswith('checkpoint-'):
+            continue
+        fstep = ckdir.rsplit('-',maxsplit=1)[1]
+        if int(fstep) <= global_step - 3* args.save_steps:
+            shutil.rmtree(ckdir)
+    
 
 
 def load_checkpoint(args, loading_step=None):
