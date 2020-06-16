@@ -269,7 +269,7 @@ def load_checkpoint(args, loading_step=None):
 def train(args, train_dataloader, model_vae, encoder_tokenizer, decoder_tokenizer, table_name):
     """ Train the model """
     if args.local_rank in [-1, 0]:
-        tb_writer = SummaryWriter()
+        tb_writer = SummaryWriter(args.output_dir)
 
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
     # train_sampler = RandomSampler(train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
