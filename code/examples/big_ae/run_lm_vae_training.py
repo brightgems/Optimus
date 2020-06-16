@@ -215,7 +215,7 @@ def save_checkpoint(model_vae, optimizer, global_step, args):
         logger.info("Saving full checkpoint to %s", output_full_dir)
 
     # keep 3 checkpoints for saving disk space
-    ckfiles=glob.glob(args.output_dir)
+    ckfiles=glob.glob(args.output_dir+'/*')
     for ckdir in ckfiles:
         if not os.path.basename(ckdir).startswith('checkpoint-'):
             continue
@@ -986,3 +986,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

@@ -442,11 +442,15 @@ class TokenDataset(Dataset):
                 tokenized_text0 = self.tokenizers[0].convert_tokens_to_ids(self.tokenizers[0].tokenize(split_line_text))
                 tokenized_text0 = self.tokenizers[0].add_special_tokens_single_sentence(tokenized_text0)
                 tokenized_text0_length = len(tokenized_text0) 
-
-                tokenized_text1 = self.tokenizers[1].convert_tokens_to_ids(self.tokenizers[1].tokenize(split_line_text))
-                tokenized_text1 = self.tokenizers[1].add_special_tokens_single_sentence(tokenized_text1)
-                tokenized_text1 = [self.gpt2_bos_token] + tokenized_text1 + [self.gpt2_eos_token]
-                tokenized_text1_length = len(tokenized_text1)
+                if type(self.tokenizers[0])== type(self.tokenizers[1]):
+                    tokenized_text1=tokenized_text0
+                    tokenized_text1 = [self.gpt2_bos_token] + tokenized_text1 + [self.gpt2_eos_token]
+                    tokenized_text1_length = len(tokenized_text1)
+                else:
+                    tokenized_text1 = self.tokenizers[1].convert_tokens_to_ids(self.tokenizers[1].tokenize(split_line_text))
+                    tokenized_text1 = self.tokenizers[1].add_special_tokens_single_sentence(tokenized_text1)
+                    tokenized_text1 = [self.gpt2_bos_token] + tokenized_text1 + [self.gpt2_eos_token]
+                    tokenized_text1_length = len(tokenized_text1)
 
                 example = {
                     'bert_token': tokenized_text0,
