@@ -4,7 +4,7 @@ import torch
 from torch import nn, optim
 import subprocess
 from tqdm import tqdm, trange
-from torch.utils.data import DataLoader, Dataset, Sampler, SequentialSampler, RandomSampler
+from torch.utils.data import DataLoader, Dataset, Sampler, SequentialSampler, RandomSampler, BatchSampler
 from torch.nn.utils.rnn import pad_sequence
 
 import json
@@ -151,7 +151,8 @@ class BucketingDataLoader(object):
         self.example_lengths = [example['bert_token_length'] for example in self.dataset.examples]
 
     def __iter__(self):
-        sampler = BucketSampler(self.example_lengths, self.bucket_size, self.batch_size, droplast=True, shuffle=self.shuffle)
+        # sampler = BucketSampler(self.example_lengths, self.bucket_size, self.batch_size, droplast=True, shuffle=self.shuffle)
+        sampler = BatchSampler(RandomSampler(self.dataset), batch_size = self.batch_size, droplast=True)
         loader = DataLoader(self.dataset, batch_sampler=sampler, num_workers=0, collate_fn=TokenDataset.collate)
         yield from loader
 
