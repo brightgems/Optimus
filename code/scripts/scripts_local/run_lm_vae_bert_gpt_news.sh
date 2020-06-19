@@ -9,7 +9,7 @@ export TRAIN_FILE=/code/notebook/idea-gen/text_corpus/train.txt
 export TEST_FILE=/code/notebook/idea-gen/text_corpus/valid.txt
 
 
-CUDA_VISIBLE_DEVICES=$GPU_ID python examples/big_ae/run_lm_vae_training.py \
+CUDA_VISIBLE_DEVICES=$GPU_ID python examples/big_ae/run_lm_vae_training_old.py \
     --dataset sgnews \
     --output_dir=../output/local_lm_vae_sgnews_bert_gpt \
     --encoder_model_type=bert \
