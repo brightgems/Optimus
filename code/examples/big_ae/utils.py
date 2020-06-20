@@ -722,7 +722,7 @@ class TextDataset_2Tokenizers_LCtrlG(Dataset):
         print(file_path)
         assert os.path.isfile(file_path)
         directory, filename = os.path.split(file_path)
-        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename}')
+        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename[:-4]}')
 
         self.examples = []
         self.tokenizers = tokenizers
@@ -827,7 +827,7 @@ class TextDataset_2Tokenizers(Dataset):
     def __init__(self, tokenizers, args, file_path='train', text_split_mode='natural', block_size=512):
         assert os.path.isfile(file_path)
         directory, filename = os.path.split(file_path)
-        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename}')
+        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename[:-4]}')
 
         self.examples = []
         self.tokenizers = tokenizers
