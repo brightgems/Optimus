@@ -851,6 +851,7 @@ class TextDataset_2Tokenizers(Dataset):
             #     self.examples = pickle.load(handle)
             with open(cached_features_file, 'rb') as handle:
                 self.examples = json.load(handle)
+            logger.info("Finish load features from cached file %s", cached_features_file)
         else:
             logger.info("Creating features from dataset file at %s", cached_features_file)
 
