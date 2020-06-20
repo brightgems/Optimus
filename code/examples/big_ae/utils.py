@@ -7,7 +7,10 @@ from tqdm import tqdm, trange
 from torch.utils.data import DataLoader, Dataset, Sampler, SequentialSampler, RandomSampler, BatchSampler
 from torch.nn.utils.rnn import pad_sequence
 
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import pdb
 
 import torch.nn.init as init
@@ -722,7 +725,7 @@ class TextDataset_2Tokenizers_LCtrlG(Dataset):
         print(file_path)
         assert os.path.isfile(file_path)
         directory, filename = os.path.split(file_path)
-        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename[:-4]}')
+        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename[:-4]}.pkl')
 
         self.examples = []
         self.tokenizers = tokenizers
@@ -827,7 +830,7 @@ class TextDataset_2Tokenizers(Dataset):
     def __init__(self, tokenizers, args, file_path='train', text_split_mode='natural', block_size=512):
         assert os.path.isfile(file_path)
         directory, filename = os.path.split(file_path)
-        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename[:-4]}')
+        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename[:-4]}.json')
 
         self.examples = []
         self.tokenizers = tokenizers
@@ -844,8 +847,10 @@ class TextDataset_2Tokenizers(Dataset):
 
         if os.path.exists(cached_features_file):
             logger.info("Loading features from cached file %s", cached_features_file)
+            # with open(cached_features_file, 'rb') as handle:
+            #     self.examples = pickle.load(handle)
             with open(cached_features_file, 'rb') as handle:
-                self.examples = pickle.load(handle)
+                self.examples = json.load(handle)
         else:
             logger.info("Creating features from dataset file at %s", cached_features_file)
 
@@ -865,17 +870,10 @@ class TextDataset_2Tokenizers(Dataset):
             # can change this behavior by adding (model specific) padding.
 
             logger.info("Saving features into cached file %s", cached_features_file)
-            if args.use_philly:
-                save_solid = False
-                while not save_solid:
-                    try:           
-                        with open(cached_features_file, 'wb') as handle:
-                            pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
-                    except:
-                        pass
-            else:
-                with open(cached_features_file, 'wb') as handle:
-                    pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                # with open(cached_features_file, 'wb') as handle:
+                #     pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                with open(cached_features_file, 'w') as handle:
+                    json.dump(self.examples, handle)
 
     def __len__(self):
         return len(self.examples)
