@@ -830,7 +830,7 @@ class TextDataset_2Tokenizers(Dataset):
     def __init__(self, tokenizers, args, file_path='train', text_split_mode='natural', block_size=512):
         assert os.path.isfile(file_path)
         directory, filename = os.path.split(file_path)
-        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename[:-4]}.json')
+        cached_features_file = os.path.join(directory, f'cached_lm_gpt_bert_{block_size}_{filename[:-4]}.pkl')
 
         self.examples = []
         self.tokenizers = tokenizers
@@ -847,8 +847,8 @@ class TextDataset_2Tokenizers(Dataset):
 
         if os.path.exists(cached_features_file):
             logger.info("Loading features from cached file %s", cached_features_file)
-            # with open(cached_features_file, 'rb') as handle:
-            #     self.examples = pickle.load(handle)
+            with open(cached_features_file, 'rb') as handle:
+                self.examples = pickle.load(handle)
             with open(cached_features_file, 'rb') as handle:
                 self.examples = json.load(handle)
             logger.info("Finish load features from cached file %s", cached_features_file)
@@ -871,10 +871,9 @@ class TextDataset_2Tokenizers(Dataset):
             # can change this behavior by adding (model specific) padding.
 
             logger.info("Saving features into cached file %s", cached_features_file)
-            # with open(cached_features_file, 'wb') as handle:
-            #     pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            with open(cached_features_file, 'w') as handle:
-                json.dump(self.examples, handle)
+            with open(cached_features_file, 'wb') as handle:
+                pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 
     def __len__(self):
         return len(self.examples)
