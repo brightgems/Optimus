@@ -464,10 +464,10 @@ def evaluate(args, model_vae, encoder_tokenizer, decoder_tokenizer, table_name, 
     # Loop to handle MNLI double evaluation (matched, mis-matched)
     eval_output_dir = args.output_dir
 
-    # if subset == 'test':
-    #     eval_dataset = load_and_cache_examples(args, [encoder_tokenizer, decoder_tokenizer], evaluate=True)
-    # elif subset == 'train':
-    #     eval_dataset = load_and_cache_examples(args, [encoder_tokenizer, decoder_tokenizer], evaluate=False)
+    if subset == 'test':
+        eval_dataset = load_and_cache_examples(args, [encoder_tokenizer, decoder_tokenizer], evaluate=True)
+    elif subset == 'train':
+        eval_dataset = load_and_cache_examples(args, [encoder_tokenizer, decoder_tokenizer], evaluate=False)
     logger.info("***** Running evaluation on {} dataset *****".format(subset))
 
     if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
@@ -480,7 +480,7 @@ def evaluate(args, model_vae, encoder_tokenizer, decoder_tokenizer, table_name, 
     # eval_sampler = SequentialSampler(eval_dataset) if args.local_rank == -1 else DistributedSampler(eval_dataset)
     # eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
-    eval_dataloader = build_dataload_and_cache_examples(args, [encoder_tokenizer, decoder_tokenizer], evaluate=True)
+    # eval_dataloader = build_dataload_and_cache_examples(args, [encoder_tokenizer, decoder_tokenizer], evaluate=True)
 
     # Eval!
     logger.info("***** Running evaluation {} *****".format(prefix))
@@ -535,9 +535,9 @@ def evaluate_rec(args, model_vae, encoder_tokenizer, decoder_tokenizer, table_na
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
 
     if subset == 'test':
-        eval_dataloader = build_dataload_and_cache_examples(args, [encoder_tokenizer, decoder_tokenizer], evaluate=True)
+        eval_dataloader = load_and_cache_examples(args, [encoder_tokenizer, decoder_tokenizer], evaluate=True)
     elif subset == 'train':
-        eval_dataloader = build_dataload_and_cache_examples(args, [encoder_tokenizer, decoder_tokenizer], evaluate=False)
+        eval_dataloader = load_and_cache_examples(args, [encoder_tokenizer, decoder_tokenizer], evaluate=False)
     logger.info("***** Running evaluation on {} dataset *****".format(subset))
 
     # Note that DistributedSampler samples randomly
@@ -886,7 +886,7 @@ def main():
         if args.local_rank not in [-1, 0]:
             torch.distributed.barrier()  # Barrier to make sure only the first process in distributed training process the dataset, and the others will use the cache
 
-        train_dataloader = build_dataload_and_cache_examples(args, [tokenizer_encoder, tokenizer_decoder], evaluate=False)
+        train_dataloader = load_and_cache_examples(args, [tokenizer_encoder, tokenizer_decoder], evaluate=False)
 
         if args.local_rank == 0:
             torch.distributed.barrier()
