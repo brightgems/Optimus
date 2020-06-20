@@ -847,7 +847,7 @@ class TextDataset_2Tokenizers(Dataset):
             with open(cached_features_file, 'rb') as handle:
                 self.examples = pickle.load(handle)
         else:
-            logger.info("Creating features from dataset file at %s", directory)
+            logger.info("Creating features from dataset file at %s", cached_features_file)
 
             if text_split_mode == 'block':
                 self._read_corpus_block_split(fname=file_path, block_size = block_size)
