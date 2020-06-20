@@ -870,10 +870,10 @@ class TextDataset_2Tokenizers(Dataset):
             # can change this behavior by adding (model specific) padding.
 
             logger.info("Saving features into cached file %s", cached_features_file)
-                # with open(cached_features_file, 'wb') as handle:
-                #     pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
-                with open(cached_features_file, 'w') as handle:
-                    json.dump(self.examples, handle)
+            # with open(cached_features_file, 'wb') as handle:
+            #     pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            with open(cached_features_file, 'w') as handle:
+                json.dump(self.examples, handle)
 
     def __len__(self):
         return len(self.examples)
