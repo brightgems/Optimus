@@ -807,7 +807,7 @@ class TextDataset_2Tokenizers_LCtrlG(Dataset):
 
                 # tokenize by tokenizers[1]
                 tokenized_text1 = self.tokenizers[1].convert_tokens_to_ids(self.tokenizers[1].tokenize(split_line_text))
-                tokenized_text1 = self.tokenizers[1].add_special_tokens_single_sentence(tokenized_text1)
+                # tokenized_text1 = self.tokenizers[1].add_special_tokens_single_sentence(tokenized_text1)
                 tokenized_text1 = [self.bos_token] + tokenized_text1 + [self.eos_token]
                 tokenized_text1_length = len(tokenized_text1)
                 # pad to max_seq_length (block_size)
@@ -931,15 +931,11 @@ class TextDataset_2Tokenizers(Dataset):
 
                 assert len(tokenized_text0) == block_size
                 
-                if type(self.tokenizers[0])==type(self.tokenizers[1]):
-                    tokenized_text1 = tokenized_text0
-                    tokenized_text1 = [self.gpt2_bos_token] + tokenized_text1 + [self.gpt2_eos_token]
-                    tokenized_text1_length = len(tokenized_text1)
-                else:
-                    tokenized_text1 = self.tokenizers[1].convert_tokens_to_ids(self.tokenizers[1].tokenize(split_line_text))
-                    tokenized_text1 = self.tokenizers[1].add_special_tokens_single_sentence(tokenized_text1)
-                    tokenized_text1 = [self.bos_token] + tokenized_text1 + [self.eos_token]
-                    tokenized_text1_length = len(tokenized_text1)
+                tokenized_text1 = self.tokenizers[1].convert_tokens_to_ids(self.tokenizers[1].tokenize(split_line_text))
+                # bert dont' use [CLS] in decoder
+                # tokenized_text1 = self.tokenizers[1].add_special_tokens_single_sentence(tokenized_text1)
+                tokenized_text1 = [self.bos_token] + tokenized_text1 + [self.eos_token]
+                tokenized_text1_length = len(tokenized_text1)
                 
                 if block_size>tokenized_text1_length:
                     tokenized_text1 = tokenized_text1 + ([self.pad_token] *  (block_size - tokenized_text1_length) ) # Pad up to the sequence length.
